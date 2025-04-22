@@ -1,0 +1,1827 @@
+openapi: 3.0.3
+info:
+  title: MTG Deck Builder API
+  description: |
+    API RESTful para construção e gerenciamento de decks de Magic: The Gathering.
+    Baseada em plataformas como Moxfield e Archidekt, esta API permite aos usuários
+    criar, compartilhar e analisar decks de Magic.
+  version: 1.0.0
+  contact:
+    name: MTG Deck Builder Team
+    url: https://mtgdeckbuilder.com/contact
+    email: api@mtgdeckbuilder.com
+
+servers:
+  - url: https://api.mtgdeckbuilder.com/v1
+    description: Servidor de produção
+  - url: https://dev-api.mtgdeckbuilder.com/v1
+    description: Servidor de desenvolvimento
+
+tags:
+  - name: Authentication
+    description: Endpoints para autenticação e registro de usuários
+  - name: Cards
+    description: Operações relacionadas a cartas individuais de MTG
+  - name: Sets
+    description: Operações relacionadas a coleções (sets) de MTG
+  - name: Decks
+    description: Operações de manipulação de decks
+  - name: Users
+    description: Operações relacionadas a usuários
+  - name: Formats
+    description: Informações sobre formatos de jogo e legalidade
+  - name: Meta
+    description: Dados sobre metajogo e análise
+
+paths:
+  /cards:
+    get:
+      tags:
+        - Cards
+      summary: Listar cartas
+      description: Retorna uma lista paginada de cartas de Magic
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: orderBy
+          in: query
+          schema:
+            type: string
+            enum: [name, releaseDate, cmc]
+            default: name
+          description: Campo para ordenação dos resultados
+      responses:
+        200:
+          description: Lista de cartas retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CardDTO'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /cards/{id}:
+    get:
+      tags:
+        - Cards
+      summary: Buscar carta por ID
+      description: Retorna detalhes de uma carta específica
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único da carta
+      responses:
+        200:
+          description: Carta encontrada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardDTO'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /cards/search:
+    get:
+      tags:
+        - Cards
+      summary: Buscar cartas por critérios
+      description: Retorna cartas que correspondem aos critérios de busca especificados
+      parameters:
+        - name: name
+          in: query
+          schema:
+            type: string
+          description: Nome ou parte do nome da carta
+        - name: colors
+          in: query
+          schema:
+            type: string
+          description: Cores da carta (W,U,B,R,G,C)
+        - name: type
+          in: query
+          schema:
+            type: string
+          description: Tipo de carta (criatura, mágica instantânea, etc)
+        - name: cmc
+          in: query
+          schema:
+            type: string
+          description: Custo de mana convertido (ex. "<3", "=2", ">4")
+        - name: set
+          in: query
+          schema:
+            type: string
+          description: Código do set da carta
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        200:
+          description: Resultados da busca retornados com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CardDTO'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /sets:
+    get:
+      tags:
+        - Sets
+      summary: Listar coleções
+      description: Retorna a lista de todas as coleções (sets) de Magic
+      responses:
+        200:
+          description: Lista de coleções retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SetDTO'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /sets/{code}:
+    get:
+      tags:
+        - Sets
+      summary: Buscar coleção por código
+      description: Retorna detalhes de uma coleção específica
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Código da coleção (ex. "LEA", "MID")
+      responses:
+        200:
+          description: Coleção encontrada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetDTO'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks:
+    get:
+      tags:
+        - Decks
+      summary: Listar decks públicos
+      description: Retorna uma lista paginada de decks públicos
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: format
+          in: query
+          schema:
+            type: string
+          description: Filtrar por formato de jogo
+        - name: orderBy
+          in: query
+          schema:
+            type: string
+            enum: [newest, popular, views]
+            default: newest
+          description: Campo para ordenação dos resultados
+      responses:
+        200:
+          description: Lista de decks retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeckDTO'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Decks
+      summary: Criar novo deck
+      description: Cria um novo deck com as informações fornecidas
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeckCreateDTO'
+      responses:
+        201:
+          description: Deck criado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDTO'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}:
+    get:
+      tags:
+        - Decks
+      summary: Buscar deck por ID
+      description: Retorna detalhes de um deck específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      responses:
+        200:
+          description: Deck encontrado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDTO'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Decks
+      summary: Atualizar deck existente
+      description: Atualiza as informações de um deck existente
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeckCreateDTO'
+      responses:
+        200:
+          description: Deck atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDTO'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Decks
+      summary: Excluir deck existente
+      description: Remove um deck existente
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      responses:
+        204:
+          description: Deck excluído com sucesso
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/cards:
+    post:
+      tags:
+        - Decks
+      summary: Adicionar cartas a um deck
+      description: Adiciona uma ou mais cartas a um deck existente
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/DeckCardDTO'
+      responses:
+        200:
+          description: Cartas adicionadas com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDTO'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/cards/{cardId}:
+    delete:
+      tags:
+        - Decks
+      summary: Remover carta de um deck
+      description: Remove uma carta específica de um deck
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+        - name: cardId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único da carta
+      responses:
+        204:
+          description: Carta removida com sucesso
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/stats:
+    get:
+      tags:
+        - Decks
+      summary: Obter estatísticas do deck
+      description: Retorna estatísticas detalhadas sobre um deck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      responses:
+        200:
+          description: Estatísticas retornadas com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckStatsDTO'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/export/{format}:
+    get:
+      tags:
+        - Decks
+      summary: Exportar deck
+      description: Exporta um deck para um formato específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+        - name: format
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [txt, mtgo, arena]
+          description: Formato de exportação
+      responses:
+        200:
+          description: Deck exportado com sucesso
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "1 Black Lotus\n4 Lightning Bolt\n24 Mountain\n// Sideboard\n2 Shatterstorm"
+        400:
+          $ref: '#/components/responses/BadRequest'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/clone:
+    post:
+      tags:
+        - Decks
+      summary: Clonar deck
+      description: Cria uma cópia de um deck existente
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck a ser clonado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Nome para o novo deck
+                description:
+                  type: string
+                  description: Descrição para o novo deck
+                visibility:
+                  type: string
+                  enum: [public, private, unlisted]
+                  default: private
+              required:
+                - name
+      responses:
+        201:
+          description: Deck clonado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDTO'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{id}/decks:
+    get:
+      tags:
+        - Users
+        - Decks
+      summary: Listar decks de um usuário
+      description: Retorna a lista de decks criados por um usuário específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do usuário
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: visibility
+          in: query
+          schema:
+            type: string
+            enum: [public, private, unlisted, all]
+            default: public
+          description: Filtrar por visibilidade do deck
+      security:
+        - BearerAuth: []
+        - {}
+      responses:
+        200:
+          description: Lista de decks retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeckDTO'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{id}/collection:
+    get:
+      tags:
+        - Users
+      summary: Ver coleção de cartas
+      description: Retorna a coleção de cartas de um usuário
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do usuário
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: set
+          in: query
+          schema:
+            type: string
+          description: Filtrar por coleção (set)
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Coleção retornada com sucesso
+          content:
+            application/json:
+            schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        card:
+                          $ref: '#/components/schemas/CardDTO'
+                        quantity:
+                          type: integer
+                          example: 4
+                        foil:
+                          type: boolean
+                          example: false
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Users
+      summary: Atualizar coleção de cartas
+      description: Atualiza a coleção de cartas de um usuário
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do usuário
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  cardId:
+                    type: integer
+                    example: 1
+                  quantity:
+                    type: integer
+                    example: 4
+                  foil:
+                    type: boolean
+                    example: false
+                required:
+                  - cardId
+                  - quantity
+      responses:
+        200:
+          description: Coleção atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Collection updated successfully"
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{id}/collection/import:
+    post:
+      tags:
+        - Users
+      summary: Importar cartas para coleção
+      description: Importa cartas para a coleção de um usuário a partir de um arquivo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do usuário
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [csv, mtga, mtgo, delver]
+          description: Formato do arquivo de importação
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              example: "4 Lightning Bolt\n2 Black Lotus (Foil)"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Cartas importadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  imported:
+                    type: integer
+                    example: 6
+                  message:
+                    type: string
+                    example: "6 cards imported successfully"
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Line 5: Could not recognize card 'Magical Card'"]
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /formats:
+    get:
+      tags:
+        - Formats
+      summary: Listar formatos de jogo
+      description: Retorna a lista de formatos de jogo disponíveis
+      responses:
+        200:
+          description: Lista de formatos retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormatDTO'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /formats/{name}/legality:
+    get:
+      tags:
+        - Formats
+      summary: Verificar legalidade de cartas
+      description: Verifica a legalidade de cartas em um formato específico
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Nome do formato (ex. "Standard", "Modern")
+        - name: cardIds
+          in: query
+          required: true
+          schema:
+            type: string
+          description: IDs das cartas separados por vírgula
+      responses:
+        200:
+          description: Legalidade das cartas retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  format:
+                    type: string
+                    example: "Modern"
+                  cards:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        name:
+                          type: string
+                          example: "Black Lotus"
+                        legality:
+                          type: string
+                          enum: [legal, banned, restricted, not_legal]
+                          example: "banned"
+        400:
+          $ref: '#/components/responses/BadRequest'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /meta/{format}:
+    get:
+      tags:
+        - Meta
+      summary: Obter dados de meta
+      description: Retorna dados de meta para um formato específico
+      parameters:
+        - name: format
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Nome do formato (ex. "Standard", "Modern")
+        - name: timeframe
+          in: query
+          schema:
+            type: string
+            enum: [week, month, season, all]
+            default: month
+          description: Período de tempo para os dados
+      responses:
+        200:
+          description: Dados de meta retornados com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  format:
+                    type: string
+                    example: "Modern"
+                  timeframe:
+                    type: string
+                    example: "month"
+                  archetypes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: "Burn"
+                        percentage:
+                          type: number
+                          format: float
+                          example: 15.2
+                        winRate:
+                          type: number
+                          format: float
+                          example: 52.8
+                  topCards:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        name:
+                          type: string
+                          example: "Lightning Bolt"
+                        playRate:
+                          type: number
+                          format: float
+                          example: 45.7
+        400:
+          $ref: '#/components/responses/BadRequest'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Registrar novo usuário
+      description: Cria uma nova conta de usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterDTO'
+      responses:
+        201:
+          description: Usuário registrado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDTO'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        409:
+          description: Conflito - Email ou nome de usuário já existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponseDTO'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Autenticar usuário
+      description: Autentica um usuário e retorna um token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestDTO'
+      responses:
+        200:
+          description: Autenticação bem-sucedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponseDTO'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/comments:
+    get:
+      tags:
+        - Decks
+      summary: Listar comentários de um deck
+      description: Retorna a lista de comentários em um deck específico
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        200:
+          description: Lista de comentários retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CommentDTO'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Decks
+      summary: Adicionar comentário a um deck
+      description: Adiciona um novo comentário a um deck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  example: "Great deck! What do you think about replacing Counterspell with Force of Will?"
+              required:
+                - content
+      responses:
+        201:
+          description: Comentário adicionado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentDTO'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/like:
+    post:
+      tags:
+        - Decks
+      summary: Curtir um deck
+      description: Adiciona uma curtida a um deck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Curtida adicionada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deckId:
+                    type: integer
+                    example: 1
+                  likes:
+                    type: integer
+                    example: 151
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Decks
+      summary: Remover curtida de um deck
+      description: Remove uma curtida de um deck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      security:
+        - BearerAuth: []
+      responses:
+        204:
+          description: Curtida removida com sucesso
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/tags:
+    post:
+      tags:
+        - Decks
+      summary: Adicionar tags a um deck
+      description: Adiciona uma ou mais tags a um deck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: ["budget", "aggro", "competitive"]
+              required:
+                - tags
+      responses:
+        200:
+          description: Tags adicionadas com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deckId:
+                    type: integer
+                    example: 1
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                    example: ["power9", "vintage", "collection", "budget", "aggro", "competitive"]
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+  /decks/{id}/tags/{tagId}:
+    delete:
+      tags:
+        - Decks
+      summary: Remover tag de um deck
+      description: Remove uma tag específica de um deck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID único do deck
+        - name: tagId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID da tag a ser removida
+      security:
+        - BearerAuth: []
+      responses:
+        204:
+          description: Tag removida com sucesso
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    CardDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Black Lotus"
+        manaCost:
+          type: string
+          example: "{0}"
+        cmc:
+          type: number
+          format: float
+          example: 0
+        types:
+          type: array
+          items:
+            type: string
+          example: ["Artifact"]
+        subtypes:
+          type: array
+          items:
+            type: string
+          example: []
+        text:
+          type: string
+          example: "{T}, Sacrifice Black Lotus: Add three mana of any one color."
+        power:
+          type: string
+          nullable: true
+          example: null
+        toughness:
+          type: string
+          nullable: true
+          example: null
+        loyalty:
+          type: integer
+          nullable: true
+          example: null
+        colors:
+          type: array
+          items:
+            type: string
+          example: []
+        colorIdentity:
+          type: array
+          items:
+            type: string
+          example: []
+        setCode:
+          type: string
+          example: "LEA"
+        rarity:
+          type: string
+          example: "Rare"
+        imageUrl:
+          type: string
+          example: "https://api.magicthegathering.io/images/lea/black-lotus.jpg"
+        multiverse_id:
+          type: integer
+          example: 3
+        legalities:
+          type: array
+          items:
+            type: object
+            properties:
+              format:
+                type: string
+                example: "Vintage"
+              legality:
+                type: string
+                example: "Restricted"
+      required:
+        - id
+        - name
+        - types
+
+    DeckCardDTO:
+      type: object
+      properties:
+        cardId:
+          type: integer
+          example: 1
+        quantity:
+          type: integer
+          example: 1
+          minimum: 1
+        isSideboard:
+          type: boolean
+          example: false
+        isCommander:
+          type: boolean
+          example: false
+        isCompanion:
+          type: boolean
+          example: false
+      required:
+        - cardId
+        - quantity
+
+    DeckDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Power 9 Collection"
+        format:
+          type: string
+          example: "Vintage"
+        description:
+          type: string
+          example: "A showcase of the most powerful cards in Magic's history"
+        visibility:
+          type: string
+          enum: [public, private, unlisted]
+          example: "public"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["power9", "vintage", "collection"]
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeckCardDTO'
+        sideboard:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeckCardDTO'
+        commander:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/DeckCardDTO'
+        companion:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/DeckCardDTO'
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-20T15:30:15Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-04-21T10:12:42Z"
+        author:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 42
+            username:
+              type: string
+              example: "VintageMaster"
+        likes:
+          type: integer
+          example: 150
+        comments:
+          type: integer
+          example: 23
+        views:
+          type: integer
+          example: 1502
+      required:
+        - id
+        - name
+        - format
+        - visibility
+        - cards
+        - createdAt
+        - author
+
+    DeckCreateDTO:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Power 9 Collection"
+        format:
+          type: string
+          example: "Vintage"
+        description:
+          type: string
+          example: "A showcase of the most powerful cards in Magic's history"
+        visibility:
+          type: string
+          enum: [public, private, unlisted]
+          default: public
+          example: "public"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["power9", "vintage", "collection"]
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeckCardDTO'
+      required:
+        - name
+        - format
+        - cards
+
+    DeckStatsDTO:
+      type: object
+      properties:
+        deckId:
+          type: integer
+          example: 1
+        cardCount:
+          type: integer
+          example: 60
+        sideboardCount:
+          type: integer
+          example: 15
+        colorDistribution:
+          type: object
+          properties:
+            white:
+              type: integer
+              example: 15
+            blue:
+              type: integer
+              example: 20
+            black:
+              type: integer
+              example: 0
+            red:
+              type: integer
+              example: 10
+            green:
+              type: integer
+              example: 5
+            colorless:
+              type: integer
+              example: 10
+        manaCurve:
+          type: object
+          properties:
+            "0":
+              type: integer
+              example: 4
+            "1":
+              type: integer
+              example: 10
+            "2":
+              type: integer
+              example: 12
+            "3":
+              type: integer
+              example: 15
+            "4":
+              type: integer
+              example: 8
+            "5":
+              type: integer
+              example: 6
+            "6+":
+              type: integer
+              example: 5
+        typeDistribution:
+          type: object
+          properties:
+            creature:
+              type: integer
+              example: 24
+            instant:
+              type: integer
+              example: 10
+            sorcery:
+              type: integer
+              example: 8
+            artifact:
+              type: integer
+              example: 6
+            enchantment:
+              type: integer
+              example: 4
+            planeswalker:
+              type: integer
+              example: 3
+            land:
+              type: integer
+              example: 25
+        averageCmc:
+          type: number
+          format: float
+          example: 2.75
+      required:
+        - deckId
+        - cardCount
+        - colorDistribution
+        - manaCurve
+        - typeDistribution
+        - averageCmc
+
+    UserDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 42
+        username:
+          type: string
+          example: "VintageMaster"
+        email:
+          type: string
+          format: email
+          example: "vintage@example.com"
+        avatarUrl:
+          type: string
+          example: "https://mtgdeckbuilder.com/avatars/vm.jpg"
+        joinDate:
+          type: string
+          format: date-time
+          example: "2025-01-15T08:30:00Z"
+        deckCount:
+          type: integer
+          example: 25
+        followersCount:
+          type: integer
+          example: 156
+        followingCount:
+          type: integer
+          example: 89
+        bio:
+          type: string
+          example: "Vintage enthusiast and collector since 1994"
+      required:
+        - id
+        - username
+        - email
+        - joinDate
+
+    UserRegisterDTO:
+      type: object
+      properties:
+        username:
+          type: string
+          example: "VintageMaster"
+        email:
+          type: string
+          format: email
+          example: "vintage@example.com"
+        password:
+          type: string
+          format: password
+          example: "SecureP@ssw0rd!"
+        confirmPassword:
+          type: string
+          format: password
+          example: "SecureP@ssw0rd!"
+      required:
+        - username
+        - email
+        - password
+        - confirmPassword
+
+    LoginRequestDTO:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: "vintage@example.com"
+        password:
+          type: string
+          format: password
+          example: "SecureP@ssw0rd!"
+      required:
+        - email
+        - password
+
+    LoginResponseDTO:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 42
+            username:
+              type: string
+              example: "VintageMaster"
+            email:
+              type: string
+              format: email
+              example: "vintage@example.com"
+            avatarUrl:
+              type: string
+              example: "https://mtgdeckbuilder.com/avatars/vm.jpg"
+        expiresAt:
+          type: string
+          format: date-time
+          example: "2025-04-22T14:30:45Z"
+      required:
+        - token
+        - user
+        - expiresAt
+
+    CommentDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        deckId:
+          type: integer
+          example: 1
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 42
+            username:
+              type: string
+              example: "VintageMaster"
+            avatarUrl:
+              type: string
+              example: "https://mtgdeckbuilder.com/avatars/vm.jpg"
+        content:
+          type: string
+          example: "Amazing deck! Have you considered adding Time Vault?"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-04-21T09:45:23Z"
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+      required:
+        - id
+        - deckId
+        - user
+        - content
+        - createdAt
+
+    SetDTO:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "LEA"
+        name:
+          type: string
+          example: "Limited Edition Alpha"
+        releaseDate:
+          type: string
+          format: date
+          example: "1993-08-05"
+        cardCount:
+          type: integer
+          example: 295
+        iconUrl:
+          type: string
+          example: "https://api.magicthegathering.io/icons/lea.svg"
+        description:
+          type: string
+          example: "The first Magic: The Gathering set ever released"
+      required:
+        - code
+        - name
+        - releaseDate
+        - cardCount
+
+    FormatDTO:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Standard"
+        description:
+          type: string
+          example: "Format using card sets from the most recent sets"
+        minDeckSize:
+          type: integer
+          example: 60
+        maxCardCopies:
+          type: integer
+          example: 4
+        allowedSets:
+          type: array
+          items:
+            type: string
+          example: ["MID", "VOW", "NEO", "SNC", "DMU", "BRO", "ONE", "MOM"]
+        bannedCards:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 5432
+              name:
+                type: string
+                example: "The Meathook Massacre"
+        restrictedCards:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+      required:
+        - name
+        - description
+        - minDeckSize
+        - maxCardCopies
+
+    ErrorResponseDTO:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Validation error"
+        errors:
+          type: array
+          items:
+            type: string
+          example: ["Name is required", "Format must be a valid Magic format"]
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-04-21T12:34:56Z"
+      required:
+        - status
+        - message
+        - timestamp
+
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        totalPages:
+          type: integer
+          example: 5
+        totalItems:
+          type: integer
+          example: 98
+      required:
+        - page
+        - limit
+        - totalPages
+        - totalItems
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+      description: Número da página para paginação
+      
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+      description: Número de itens por página
+
+  responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponseDTO'
+    
+    Unauthorized:
+      description: Não autorizado - autenticação necessária
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponseDTO'
+    
+    Forbidden:
+      description: Proibido - sem permissões suficientes
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponseDTO'
+    
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponseDTO'
+    
+    InternalServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponseDTO'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT de autenticação
+
+security:
+  - BearerAuth: []
