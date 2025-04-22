@@ -306,5 +306,7 @@ O arquivo completo de especificação OpenAPI está disponível no arquivo `open
 ## 6. Dados do Autor
 
 Nome: Juan Pablo Rebelo Coelho
+
 Turma: 1TDSPB
+
 RM: 560445
