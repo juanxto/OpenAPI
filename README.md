@@ -302,3 +302,9 @@ O arquivo completo de especificação OpenAPI está disponível no arquivo `open
 - **Consistência no uso de métodos HTTP e códigos de status**: Os métodos HTTP (GET, POST, PUT, DELETE) foram aplicados de forma consistente com os princípios RESTful, e todos os códigos de status relevantes foram documentados para cada rota.
 - **Precisão e clareza nas descrições e nos exemplos dos DTOs**: Cada DTO inclui campos claramente definidos com exemplos de valores realistas.
 - **Validação da especificação**: O arquivo OpenAPI foi validado usando o Swagger Editor para garantir conformidade com o padrão OpenAPI 3.0.
+
+## 6. Dados do Autor
+
+Nome: Juan Pablo Rebelo Coelho
+Turma: 1TDSPB
+RM: 560445
